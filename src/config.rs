@@ -77,8 +77,33 @@ pub struct CodexMicroConfig {
     pub custom_order: Vec<String>,
     pub commands: HashMap<String, String>,
     pub skills: HashMap<String, String>,
+    pub favorites: CodexFavorites,
     /// up/down/left/right values are prompt text submitted as a turn.
     pub cardinal_actions: HashMap<String, String>,
+}
+
+/// Configured map keys, not prompt bodies or advertised skill identities.
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(default)]
+pub struct CodexFavorites {
+    pub primary_command: Option<String>,
+    pub primary_skill: Option<String>,
+}
+
+fn default_codex_commands() -> HashMap<String, String> {
+    [
+        ("review", "Review the current changes. Focus on correctness, regressions, missing tests, unsafe assumptions and unnecessary complexity."),
+        ("status", "Summarize the current repository state, current task progress, remaining work and any blockers."),
+        ("tests", "Run the relevant validation and tests for the current changes. Report only actionable failures."),
+        ("diff", "Review the current git diff and identify unintended changes."),
+    ].into_iter().map(|(key, value)| (key.into(), value.into())).collect()
+}
+
+fn primary_entry<'a>(entries: &'a HashMap<String, String>, favorite: Option<&str>) -> Option<&'a String> {
+    match favorite {
+        Some(key) => entries.get(key),
+        None => entries.iter().min_by_key(|(name, _)| *name).map(|(_, value)| value),
+    }
 }
 
 impl Default for CodexMicroConfig {
@@ -101,14 +126,28 @@ impl Default for CodexMicroConfig {
             analog_hysteresis: 12,
             source_policy: "recent".into(),
             custom_order: Vec::new(),
-            commands: HashMap::new(),
+            commands: default_codex_commands(),
             skills: HashMap::new(),
-            cardinal_actions: HashMap::new(),
+            favorites: CodexFavorites::default(),
+            cardinal_actions: [
+                ("up", "Summarize current progress and remaining work."),
+                ("right", "Run the configured validation checks."),
+                ("down", "Review the current git diff. Focus on unintended changes."),
+                ("left", "Identify the primary blocker or uncertainty in the current task."),
+            ].into_iter().map(|(key, value)| (key.into(), value.into())).collect(),
         }
     }
 }
 
 impl CodexMicroConfig {
+    pub fn primary_command(&self) -> Option<&String> {
+        primary_entry(&self.commands, self.favorites.primary_command.as_deref())
+    }
+
+    pub fn primary_skill(&self) -> Option<&String> {
+        primary_entry(&self.skills, self.favorites.primary_skill.as_deref())
+    }
+
     pub fn normalize(&mut self) {
         self.brightness = self.brightness.min(100);
         self.analog_dead_zone = self.analog_dead_zone.clamp(1, 127);
@@ -401,6 +440,32 @@ fn config_file_path() -> std::path::PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn codex_favorites_parse_and_preserve_legacy_order() {
+        let old: Config = toml::from_str("[codex_micro.commands]\nz = 'Z'\na = 'A'\n[codex_micro.skills]\nz = 'skill-z'\na = 'skill-a'\n").unwrap();
+        assert_eq!(old.codex_micro.primary_command().map(String::as_str), Some("A"));
+        assert_eq!(old.codex_micro.primary_skill().map(String::as_str), Some("skill-a"));
+        let mut cfg = old.codex_micro;
+        cfg.favorites.primary_command = Some("z".into());
+        cfg.favorites.primary_skill = Some("z".into());
+        assert_eq!(cfg.primary_command().map(String::as_str), Some("Z"));
+        assert_eq!(cfg.primary_skill().map(String::as_str), Some("skill-z"));
+        cfg.favorites.primary_command = Some("missing".into());
+        cfg.favorites.primary_skill = Some("missing".into());
+        assert!(cfg.primary_command().is_none());
+        assert!(cfg.primary_skill().is_none());
+        let parsed: Config = toml::from_str("[codex_micro.favorites]\nprimary_command = 'review'\nprimary_skill = 'test'\n").unwrap();
+        assert_eq!(parsed.codex_micro.favorites.primary_skill.as_deref(), Some("test"));
+        assert_eq!(parsed.codex_micro.primary_command(), parsed.codex_micro.commands.get("review"));
+    }
+
+    #[test]
+    fn controller_example_is_valid_configuration() {
+        let cfg: Config = toml::from_str(include_str!("../docs/codex-controller.example.toml")).unwrap();
+        assert!(cfg.codex_micro.enabled);
+        assert_eq!(cfg.codex_micro.primary_command(), cfg.codex_micro.commands.get("review"));
+    }
 
     #[test]
     fn default_config_is_valid() {

@@ -9,6 +9,14 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  windows-controller-tests:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Test Windows controller semantics and fake app-server
+        run: cargo test --locked
+
   build-and-test:
     runs-on: ubuntu-latest
     steps:
