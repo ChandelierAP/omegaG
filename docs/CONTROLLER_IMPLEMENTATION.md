@@ -2,7 +2,7 @@
 
 本轮为计划第 27 节指定的审计 + Issue 1。Fork：ChandelierAP/omegaG；master 保持上游，main 为定制稳定基线，开发在 codex/controller-semantic-layer，提交通过 draft PR 审阅。
 
-调用链与边界见 [审计](../OMEGAG_AUDIT.md)。代码改动仅涉及 config.rs 与 codex_micro.rs 的交互层。mapper.rs 只补一行测试初始化；virtual_dualsense.rs 仅添加 Linux 测试编译条件。CI 增 Windows 任务，覆盖原来 Linux 不编译的 Codex 模块。
+调用链与边界见 [审计](../OMEGAG_AUDIT.md)。代码改动仅涉及 config.rs 与 codex_micro.rs 的交互层。mapper.rs 只修正旧测试的模式初始化及独立滑动连续性断言；virtual_dualsense.rs 仅添加 Linux 测试编译条件。CI 增 Windows 任务，覆盖原来 Linux 不编译的 Codex 模块。
 
 | 按住 PS 后的控制 | 行为 |
 |---|---|
