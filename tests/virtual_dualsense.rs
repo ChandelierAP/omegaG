@@ -154,7 +154,11 @@ fn virtual_dualsense_round_trip_over_evdev() {
     let (path, _) = evdev::enumerate()
         .find(|(_, d)| d.name() == Some("DualSense Wireless Controller"))
         .expect("virtual DualSense must appear in evdev enumeration");
-    assert!(path.starts_with("/dev/input/event"), "unexpected node {path:?}");
+    assert_eq!(path.parent(), Some(std::path::Path::new("/dev/input")));
+    assert!(
+        path.file_name().and_then(|name| name.to_str()).is_some_and(|name| name.starts_with("event")),
+        "unexpected node {path:?}"
+    );
 
     // Verify VID/PID match Sony DualSense, as the daemon's detection expects.
     let mut reader = evdev::Device::open(&path).expect("open virtual DualSense node");
