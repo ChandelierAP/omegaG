@@ -242,16 +242,19 @@ fn spawn_child(cfg: &CodexMicroConfig, epoch: ServerEpoch) -> Result<Connection,
     if !success
         || !stdout
             .split_whitespace()
-            .any(|part| part == wire::PINNED_CODEX_VERSION)
+            .any(wire::supported_version)
     {
-        return Err(format!("Codex {} required", wire::PINNED_CODEX_VERSION));
+        return Err(format!("Supported Codex versions: {}", wire::SUPPORTED_CODEX_VERSIONS.join(", ")));
     }
     let mut command = Command::new(&cfg.codex_executable);
     command
-        .args(["app-server", "--stdio"])
+        .args(["app-server", "--listen", "stdio://"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    if let Some(model) = cfg.model.as_deref().filter(|model| !model.trim().is_empty()) {
+        command.args(["-c", &format!("model={}", serde_json::to_string(model).expect("model serializes"))]);
+    }
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;
@@ -584,7 +587,11 @@ fn handle_frame(
                 .pointer("/userAgent")
                 .and_then(Value::as_str)
                 .unwrap_or("");
-            if !user_agent.is_empty() && !user_agent.contains(wire::PINNED_CODEX_VERSION) {
+            if !user_agent.is_empty()
+                && !user_agent.split_whitespace().any(|part| {
+                    part.rsplit_once('/').is_some_and(|(_, version)| wire::supported_version(version))
+                })
+            {
                 return Err("incompatible Codex app-server version".into());
             }
             send(conn, wire::initialized())?;
@@ -1880,14 +1887,16 @@ sleep 2
     fn live_codex_read_only_smoke() {
         use crate::codex_micro::CodexMicro;
 
-        let (success, output) = probe_version("codex", Duration::from_secs(2)).unwrap();
+        let executable = std::env::var("OMEGAG_CODEX_EXECUTABLE").unwrap_or_else(|_| "codex".into());
+        let (success, output) = probe_version(&executable, Duration::from_secs(2)).unwrap();
         assert!(success);
         let version = String::from_utf8_lossy(&output).trim().to_owned();
-        assert!(version.contains(wire::PINNED_CODEX_VERSION));
+        assert!(version.split_whitespace().any(wire::supported_version));
 
         let cfg = CodexMicroConfig {
             enabled: true,
-            cwd: env!("CARGO_MANIFEST_DIR").into(),
+            codex_executable: executable,
+            cwd: std::env::current_dir().unwrap().to_string_lossy().into(),
             request_timeout_ms: 15_000,
             reconnect_max_ms: 250,
             ..Default::default()

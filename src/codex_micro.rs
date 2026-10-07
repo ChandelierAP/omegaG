@@ -756,8 +756,10 @@ impl CodexMicro {
             if pressed(b.triangle, self.prev.triangle) {
                 out.push(self.bind(SemanticAction::Send));
             }
-            if pressed(b.square, self.prev.square) {
-                out.push(self.bind(SemanticAction::ToggleFast));
+            if pressed(b.square, self.prev.square)
+                && let Some(command) = cfg.commands.get("review")
+            {
+                out.push(self.bind(SemanticAction::Command(command.clone())));
             }
             if pressed(b.options, self.prev.options) {
                 out.push(self.bind(SemanticAction::ContinueInNewChat));
@@ -789,14 +791,21 @@ impl CodexMicro {
                 out.push(self.bind(SemanticAction::SetReasoning(self.reasoning)));
             }
             if pressed(b.l3, self.prev.l3)
-                && let Some((_, command)) = cfg.commands.iter().min_by_key(|(name, _)| *name)
+                && let Some(command) = cfg.primary_command()
             {
                 out.push(self.bind(SemanticAction::Command(command.clone())));
             }
             if pressed(b.r3, self.prev.r3)
-                && let Some((_, skill)) = cfg.skills.iter().min_by_key(|(name, _)| *name)
+                && let Some(skill) = cfg.primary_skill()
             {
                 out.push(self.bind(SemanticAction::Skill(skill.clone())));
+            }
+            for (direction, name) in [(DPad::Left, "status"), (DPad::Right, "tests")] {
+                if pressed(b.dpad == direction, self.prev.dpad == direction)
+                    && let Some(command) = cfg.commands.get(name)
+                {
+                    out.push(self.bind(SemanticAction::Command(command.clone())));
+                }
             }
             if modifier
                 && let Some(direction) = self.analog.update(
@@ -1309,6 +1318,53 @@ mod tests {
             s.update_input(&i, 5, &cfg).0,
             vec![SemanticAction::SetReasoning(3)]
         );
+    }
+
+    #[test]
+    fn review_status_tests_are_one_shot_and_require_ps() {
+        let cfg = enabled();
+        let mut state = CodexMicro::default();
+        neutralize(&mut state, &cfg);
+        let mut input = UnifiedInput::default();
+        input.buttons.square = true;
+        assert!(state.update_input(&input, 10, &cfg).0.is_empty());
+        input.buttons.square = false;
+        state.update_input(&input, 11, &cfg);
+        input.buttons.ps = true;
+        input.buttons.square = true;
+        assert_eq!(state.update_input(&input, 12, &cfg).0, vec![SemanticAction::Command(cfg.commands["review"].clone())]);
+        assert!(state.update_input(&input, 13, &cfg).0.is_empty());
+        input.buttons.square = false;
+        for (direction, name) in [(DPad::Left, "status"), (DPad::Right, "tests")] {
+            input.buttons.dpad = direction;
+            assert_eq!(state.update_input(&input, 14, &cfg).0, vec![SemanticAction::Command(cfg.commands[name].clone())]);
+            assert!(state.update_input(&input, 15, &cfg).0.is_empty());
+        }
+    }
+
+    #[test]
+    fn favorites_dispatch_explicit_values_and_invalid_keys_do_nothing() {
+        let mut cfg = enabled();
+        cfg.commands.insert("z".into(), "chosen-command".into());
+        cfg.skills.insert("a".into(), "other-skill".into());
+        cfg.skills.insert("z".into(), "chosen-skill".into());
+        cfg.favorites.primary_command = Some("z".into());
+        cfg.favorites.primary_skill = Some("z".into());
+        let mut state = CodexMicro::default();
+        neutralize(&mut state, &cfg);
+        let mut input = UnifiedInput::default();
+        input.buttons.ps = true;
+        input.buttons.l3 = true;
+        input.buttons.r3 = true;
+        assert_eq!(state.update_input(&input, 10, &cfg).0, vec![SemanticAction::Command("chosen-command".into()), SemanticAction::Skill("chosen-skill".into())]);
+        input.buttons.l3 = false;
+        input.buttons.r3 = false;
+        state.update_input(&input, 11, &cfg);
+        cfg.favorites.primary_command = Some("missing".into());
+        cfg.favorites.primary_skill = Some("missing".into());
+        input.buttons.l3 = true;
+        input.buttons.r3 = true;
+        assert!(state.update_input(&input, 12, &cfg).0.is_empty());
     }
     #[test]
     fn enabled_without_demo_mode_activates_runtime_controls() {

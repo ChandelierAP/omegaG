@@ -2659,18 +2659,18 @@ mod tests {
     }
 
     #[test]
-    fn switching_modes_clears_prev_touch() {
+    fn enabling_stick_preserves_independent_touchpad_swipe() {
         let mut mapper = MapperState::default();
         // Establish prev_touch in touchpad mode
+        mapper.mouse_stick_active.store(false, Ordering::Relaxed);
         mapper.update(&input_with_touch(500, 300, false));
         assert!(mapper.prev_touch.is_some());
-        // Switch to stick mode — next frame clears prev_touch
+        // Stick and touchpad are independent; enabling the stick must not
+        // discard an ongoing swipe or introduce a missing frame.
         enable_stick_mode(&mapper);
-        mapper.update(&input_with_touch(510, 305, false));
-        assert!(
-            mapper.prev_touch.is_none(),
-            "prev_touch must clear when mode switches to stick"
-        );
+        let actions = mapper.update(&input_with_touch(510, 305, false));
+        assert_eq!(mapper.prev_touch, Some((510, 305)));
+        assert!(actions.iter().any(|action| matches!(action, Action::MouseMove { dx: 15, dy: 7 })));
     }
 
     #[test]

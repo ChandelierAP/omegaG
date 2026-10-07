@@ -1,0 +1,32 @@
+# Merge this section into %APPDATA%/ds4cc/config.toml.
+# Requires the pinned Codex version; do not replace unrelated existing settings.
+[codex_micro]
+enabled = true
+codex_executable = "codex"
+cwd = ""
+request_timeout_ms = 15000
+reconnect_min_ms = 250
+reconnect_max_ms = 8000
+composer_limit = 16384
+brightness = 70
+inactivity_seconds = 180
+analog_dead_zone = 48
+analog_hysteresis = 12
+source_policy = "recent"
+
+[codex_micro.commands]
+review = "Review the current changes. Focus on correctness, regressions, missing tests, unsafe assumptions and unnecessary complexity."
+status = "Summarize the current repository state, current task progress, remaining work and any blockers."
+tests = "Run the relevant validation and tests for the current changes. Report only actionable failures."
+diff = "Review the current git diff and identify unintended changes."
+
+[codex_micro.favorites]
+primary_command = "review"
+# Set only to a configured skills map key resolving to an advertised skill.
+# primary_skill = "test"
+
+[codex_micro.cardinal_actions]
+up = "Summarize current progress and remaining work."
+right = "Run the configured validation checks."
+down = "Review the current git diff. Focus on unintended changes."
+left = "Identify the primary blocker or uncertainty in the current task."

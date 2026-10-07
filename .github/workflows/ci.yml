@@ -9,6 +9,22 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  windows-controller-tests:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Test Windows controller semantics and fake app-server
+        run: cargo test --locked
+      - name: Build Windows application
+        run: cargo build --locked
+      - uses: actions/upload-artifact@v4
+        with:
+          name: omegag-windows
+          path: |
+            target/debug/ds4cc.exe
+            target/debug/deps/ds4cc-*.exe
+
   build-and-test:
     runs-on: ubuntu-latest
     steps:
@@ -42,6 +58,10 @@ jobs:
           # default rule makes /dev/uinput root-only, so open it up for
           # the test run (CI-only, ephemeral runner).
           sudo chmod a+rw /dev/uinput
+          # Newly created event nodes also need read access for evdev enumeration.
+          # This rule exists only on the disposable CI runner.
+          echo 'SUBSYSTEM=="input", KERNEL=="event*", MODE="0666"' | sudo tee /etc/udev/rules.d/99-omegag-ci.rules
+          sudo udevadm control --reload-rules
           ls -l /dev/uinput
 
       - name: Run test suite

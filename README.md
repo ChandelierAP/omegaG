@@ -224,13 +224,14 @@ Hold **PS** to enter the discoverable, exclusive modifier layer. While held:
 | L1 / R1 | Previous / next of six chat slots |
 | Share | Create a blank thread (`thread/start`) |
 | Cross / Circle | One-shot accept / decline for selected armed approval |
-| Square | Toggle advertised `priority` tier for subsequent turns |
+| Square | Run configured `review` command |
 | Triangle | Send bounded composer (`turn/start`) |
 | Options | Fork selected thread (`thread/fork`) |
 | L2 | Hold starts/release stops; second press within 350 ms toggles hands-free latch; next press stops |
 | Right stick cardinal | Four analog actions with dead zone + hysteresis |
-| D-pad up/down | Previous / next model-advertised reasoning effort |
-| L3 / R3 | First configured command / skill (sorted by configured name) |
+| D-pad up/down | Increase / decrease model-advertised reasoning effort |
+| D-pad left/right | Run configured `status` / `tests` command |
+| L3 / R3 | Explicit primary command / skill favorite; sorted-name fallback when unset |
 | Touchpad press | Select; second press reads and resumes |
 
 The semantic model has exactly six slots, `recent`, `pinned`, `priority`, and
@@ -239,6 +240,18 @@ The semantic model has exactly six slots, `recent`, `pinned`, `priority`, and
 press within 350 ms (inclusive) activates. Reasoning indexes the model-advertised
 efforts. Commands/cardinals submit configured prompt text; skill favorites are
 resolved against the current exact advertised name/path before submission.
+
+Set `[codex_micro.favorites] primary_command = "review"` and optionally
+`primary_skill` to a key in `[codex_micro.skills]`. An unset favorite retains
+sorted-name selection; an explicitly unknown key performs no action. Existing
+command/skill tables remain authoritative and are not merged with new defaults.
+Without a commands table, defaults provide review, status, tests, and diff;
+without a cardinal table, defaults provide progress, checks, diff, and blockers.
+See [complete configuration example](docs/codex-controller.example.toml).
+
+Touchpad retains select/read/resume. Priority toggle remains a semantic action
+but has no default physical binding because Touchpad is already occupied.
+Commands require PS and fire only on a fresh press; no prompt bodies are logged.
 
 ### Feedback
 
