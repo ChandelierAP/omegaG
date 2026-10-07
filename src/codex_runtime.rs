@@ -252,6 +252,9 @@ fn spawn_child(cfg: &CodexMicroConfig, epoch: ServerEpoch) -> Result<Connection,
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    if let Some(model) = cfg.model.as_deref().filter(|model| !model.trim().is_empty()) {
+        command.args(["-c", &format!("model={}", serde_json::to_string(model).expect("model serializes"))]);
+    }
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;

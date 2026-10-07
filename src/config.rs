@@ -57,6 +57,8 @@ pub struct CodexMicroConfig {
     pub demo_mode: bool,
     /// Absolute executable, or `codex` to resolve it with PATH.
     pub codex_executable: String,
+    /// Optional model override scoped to the child app-server only.
+    pub model: Option<String>,
     /// Optional working directory for new threads and skills/list.
     pub cwd: String,
     pub request_timeout_ms: u64,
@@ -112,6 +114,7 @@ impl Default for CodexMicroConfig {
             enabled: false,
             demo_mode: false,
             codex_executable: "codex".into(),
+            model: None,
             cwd: String::new(),
             request_timeout_ms: 15_000,
             reconnect_min_ms: 250,
