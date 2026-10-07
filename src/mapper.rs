@@ -2662,6 +2662,7 @@ mod tests {
     fn switching_modes_clears_prev_touch() {
         let mut mapper = MapperState::default();
         // Establish prev_touch in touchpad mode
+        mapper.mouse_stick_active.store(false, Ordering::Relaxed);
         mapper.update(&input_with_touch(500, 300, false));
         assert!(mapper.prev_touch.is_some());
         // Switch to stick mode — next frame clears prev_touch

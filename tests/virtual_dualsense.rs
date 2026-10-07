@@ -92,6 +92,7 @@ fn uinput_usable() -> bool {
 }
 
 #[test]
+#[cfg(target_os = "linux")]
 fn virtual_dualsense_round_trip_over_evdev() {
     if !uinput_usable() {
         return;
@@ -199,6 +200,7 @@ fn virtual_dualsense_round_trip_over_evdev() {
 /// key combo through the same code path the mapper uses and read it back.
 /// This is the Linux-port half of the bridge (controller → keystrokes).
 #[test]
+#[cfg(target_os = "linux")]
 fn virtual_keyboard_injection_round_trip() {
     if !uinput_usable() {
         return;
