@@ -21,7 +21,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: omegag-windows
-          path: target/debug/ds4cc.exe
+          path: |
+            target/debug/ds4cc.exe
+            target/debug/deps/ds4cc-*.exe
 
   build-and-test:
     runs-on: ubuntu-latest

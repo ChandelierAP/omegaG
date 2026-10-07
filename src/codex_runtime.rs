@@ -1893,7 +1893,7 @@ sleep 2
         let cfg = CodexMicroConfig {
             enabled: true,
             codex_executable: executable,
-            cwd: env!("CARGO_MANIFEST_DIR").into(),
+            cwd: std::env::current_dir().unwrap().to_string_lossy().into(),
             request_timeout_ms: 15_000,
             reconnect_max_ms: 250,
             ..Default::default()
