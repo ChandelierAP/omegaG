@@ -8,6 +8,12 @@ use serde_json::{Value, json};
 use std::io::BufRead;
 
 pub const PINNED_CODEX_VERSION: &str = "0.145.0-alpha.24";
+/// Additional versions admitted after local protocol compatibility validation.
+pub const SUPPORTED_CODEX_VERSIONS: &[&str] = &[PINNED_CODEX_VERSION, "0.146.0"];
+
+pub fn supported_version(version: &str) -> bool {
+    SUPPORTED_CODEX_VERSIONS.contains(&version)
+}
 pub const MAX_FRAME_BYTES: usize = 1024 * 1024;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -152,6 +158,15 @@ pub fn encode_line(value: &Value) -> Vec<u8> {
 mod tests {
     use super::*;
     use std::io::{BufReader, Cursor};
+
+    #[test]
+    fn compatibility_versions_are_explicit() {
+        assert!(supported_version(PINNED_CODEX_VERSION));
+        assert!(supported_version("0.146.0"));
+        assert!(!supported_version("0.146.1"));
+        assert!(!supported_version("0.146.0-other"));
+        assert!(!supported_version("0.130.0-alpha.5"));
+    }
 
     #[test]
     fn handshake_is_exact() {
